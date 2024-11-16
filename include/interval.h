@@ -14,7 +14,7 @@ public:
         return max - min;
     }
 
-    bool contains(double x) const {
+    bool surrounds(double x) const {
         return min < x && x < max;
     }
 
