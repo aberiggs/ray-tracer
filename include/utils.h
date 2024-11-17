@@ -1,6 +1,7 @@
 #pragma once
 
 #include <limits>
+#include <random>
 
 // Constants
 constexpr double inf = std::numeric_limits<double>::infinity();
@@ -11,9 +12,9 @@ inline double degrees_to_radians(double degrees) {
     return degrees * pi / 180;
 }
 
-// Common Headers
-#include "color.h"
-#include "interval.h"
-#include "ray.h"
-#include "vec3.h"
+inline double random_double() {
+    static std::uniform_real_distribution<double> distribution(0.0, 1.0);
+    static std::mt19937 generator;
+    return distribution(generator);
+}
 

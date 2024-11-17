@@ -1,6 +1,6 @@
 #pragma once
 
-#include"raytracer.h" // inf is defined here
+#include"utils.h" // inf is defined here
 
 class interval {
 public:
@@ -16,6 +16,10 @@ public:
 
     bool surrounds(double x) const {
         return min < x && x < max;
+    }
+
+    double clamp(double x) const {
+        return std::max(min, std::min(max, x));
     }
 
     static const interval empty, universe;
