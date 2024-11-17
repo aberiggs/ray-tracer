@@ -16,8 +16,8 @@ public:
 
         std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
 
-        for (int j = 0; j < image_height; ++j) {
-            std::clog << "\rScanlines remaining: " << image_height - j << ' ' << std::flush;
+        int j {};
+        for (j = 0; j < image_height; ++j) {
             for (int i = 0; i < image_width; ++i) {
                 color pixel_color(0, 0, 0);
                 for (int s = 0; s < samples_per_pixel; ++s) {
@@ -26,7 +26,11 @@ public:
                 }
                 write_color(std::cout, pixel_samples_scale * pixel_color);
             }
+            // Print progress
+            constexpr char wheel[] = {'-', '\\', '|', '/'}; 
+            std::clog << "\rProgress: " << j << "/" << image_height << " " << wheel[j % sizeof(wheel)] << std::flush;
         }
+        std::clog << "\rProgress: " << j << "/" << image_height << "  " << std::flush;
         std::clog << "\nDone.\n";
     }
 
@@ -84,7 +88,7 @@ private:
 
         hit_record rec;
         if (world.hit(r, {0.001, inf}, rec)) {
-            vec3 direction = random_on_hemisphere(rec.normal);
+            vec3 direction = rec.normal + random_unit_vector();
             return 0.5 * ray_color({rec.p, direction}, world, depth - 1);
         }
 
