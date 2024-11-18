@@ -2,6 +2,7 @@
 
 #include "color.h"
 #include "hittable.h"
+#include "material.h"
 #include "ray.h"
 
 class camera {
@@ -88,8 +89,12 @@ private:
 
         hit_record rec;
         if (world.hit(r, {0.001, inf}, rec)) {
-            vec3 direction = rec.normal + random_unit_vector();
-            return 0.5 * ray_color({rec.p, direction}, world, depth - 1);
+            ray scattered;
+            color attenuation;
+            if (rec.mat_ptr->scatter(r, rec, attenuation, scattered)) {
+                return attenuation * ray_color(scattered, world, depth - 1);
+            }
+            return {0, 0, 0};
         }
 
         vec3 unit_direction = unit_vector(r.direction());
