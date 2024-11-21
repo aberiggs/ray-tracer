@@ -1,5 +1,6 @@
 # ray-tracer
-A simple CPU ray tracer written in **C++**. Based off of [Ray Tracing in One Weekend](https://raytracing.github.io/books/RayTracingInOneWeekend.html).
+A simple CPU ray tracer written in **C++**.
+
 ## Building
 From the root of the repository, do the following:
 ```sh
