@@ -30,28 +30,11 @@ public:
         // Create output buffer
         std::vector<color> output_buffer(image_width * image_height);
 
-        // int j {};
-        // for (j = 0; j < image_height; ++j) {
-            // for (int i = 0; i < image_width; ++i) {
-                // color pixel_color(0, 0, 0);
-                // for (int s = 0; s < samples_per_pixel; ++s) {
-                    // ray r = get_ray(i, j);
-                    // pixel_color += ray_color(r, world, max_depth);
-                // }
-                // output_buffer[j * image_width + i] = pixel_color;
-            // }
-            // // Print progress
-            // constexpr char wheel[] = {'-', '\\', '|', '/'}; 
-            // std::clog << "\rProgress: " << j << "/" << image_height << " " << wheel[j % sizeof(wheel)] << std::flush;
-        // }
-
         std::clog << "Rendering...\n";
 
-        int completed_rows {};
-        // Create lock for completed_rows
+        int completed_rows {0};
         std::mutex completed_rows_mutex;
 
-        // Make the above loop run on multiple threads
         std::vector<std::future<void>> futures;
         for (int j = 0; j < image_height; ++j) {
             if (j % 10 == 0) { // Prevent too many threads from being created at a time
@@ -59,7 +42,6 @@ public:
                     future.wait();
                 }
             }
-
             futures.push_back(std::async(std::launch::async, [this, &world, &output_buffer, &completed_rows, &completed_rows_mutex, j]() {
                 for (int i = 0; i < image_width; ++i) {
                     color pixel_color(0, 0, 0);
