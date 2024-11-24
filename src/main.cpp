@@ -1,3 +1,4 @@
+#include "bvh_node.h"
 #include "camera.h"
 #include "envs.h"
 #include "hittable_list.h"
@@ -6,8 +7,11 @@ using namespace std;
 
 int main(int argc, char **argv) {
     camera cam;
-    hittable_list world = random_scene_spheres(cam);
+    hittable_list world = scene_spheres(cam);
+    // Optimize with BVH - TODO: Make argument
+    world = hittable_list(make_shared<bvh_node>(world));
 
+    // Set non-default camera settings
     for (int i = 0; i < argc; ++i) {
         if (std::string(argv[i]) == "-s" || std::string(argv[i]) == "--samples") {
             if (i + 1 >= argc) {

@@ -1,14 +1,28 @@
 #pragma once
 
 #include "hittable.h"
+#include "ray.h"
 #include "vec3.h"
 
 class sphere : public hittable {
 public:
-    sphere(const point3& center, double radius, std::shared_ptr<material> mat_ptr) : center(center), radius(std::fmax(0,radius)), mat_ptr(mat_ptr) {}
+    //  Stationary sphere
+    sphere(const point3& center, double radius, std::shared_ptr<material> mat_ptr) : center(center, {0,0,0}), radius(std::fmax(0,radius)), mat_ptr(mat_ptr) {
+        auto rvec = vec3(radius, radius, radius);
+        bbox = aabb(center - rvec, center + rvec);
+    }
+
+    //  Moving sphere
+    sphere(const point3& center1, const point3& center2, double radius, std::shared_ptr<material> mat_ptr) : center(center1, center2 - center1), radius(std::fmax(0,radius)), mat_ptr(mat_ptr) {
+        auto rvec = vec3(radius, radius, radius);
+        aabb box1(center.at(0) - rvec, center.at(0) + rvec);
+        aabb box2(center.at(1) - rvec, center.at(1) + rvec);
+        bbox = aabb(box1, box2);
+    }
     
     bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
-        vec3 oc = r.origin() - center;
+        point3 current_center = center.at(r.time());
+        vec3 oc = r.origin() - current_center;
         auto a = r.direction().length_squared();
         auto h = dot(r.direction(), oc);
         auto c = oc.length_squared() - radius * radius;
@@ -29,15 +43,20 @@ public:
         }
         rec.t = root;
         rec.p = r.at(rec.t);
-        vec3 outward_normal = (rec.p - center) / radius;
+        vec3 outward_normal = (rec.p - current_center) / radius;
         rec.set_face_normal(r, outward_normal);
         rec.mat_ptr = mat_ptr;
 
         return true;
     }
 
+    aabb bounding_box() const override {
+        return bbox;
+    }
+
 private:
-    point3 center;
+    ray center;
     double radius;
     std::shared_ptr<material> mat_ptr;
+    aabb bbox;
 };
