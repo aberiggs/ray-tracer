@@ -10,20 +10,18 @@ public:
     
     interval(double min, double max) : min(min), max(max) {}
     
-    double size() const {
+    inline double size() const {
         return max - min;
     }
 
-    bool surrounds(double x) const {
+    inline bool surrounds(double x) const {
         return min < x && x < max;
     }
 
-    double clamp(double x) const {
+    inline double clamp(double x) const {
         return std::max(min, std::min(max, x));
     }
 
-    static const interval empty, universe;
+    static inline interval empty() {return {+inf, -inf};};
+    static inline interval universe() {return {-inf, +inf};};
 };
-
-const interval interval::empty = interval(+inf, -inf);
-const interval interval::universe = interval(-inf, +inf);
