@@ -5,7 +5,12 @@
 #include <algorithm>
 
 bvh_node::bvh_node(std::vector<hittable::ptr>& objects, size_t start, size_t end) {
-    int axis = random_int(0, 2);
+    bbox = aabb(interval::empty(), interval::empty(), interval::empty());
+    for (size_t i = start; i < end; ++i) {
+        bbox = aabb(bbox, objects[i]->bounding_box());
+    }
+
+    int axis = bbox.longest_axis();
 
     auto comparator = [axis](const hittable::ptr& a, const hittable::ptr& b) {
         return a->bounding_box().axis_interval(axis).min < b->bounding_box().axis_interval(axis).min;
@@ -30,8 +35,6 @@ bvh_node::bvh_node(std::vector<hittable::ptr>& objects, size_t start, size_t end
         left = std::make_shared<bvh_node>(objects, start, mid);
         right = std::make_shared<bvh_node>(objects, mid, end);
     }
-
-    bbox = aabb(left->bounding_box(), right->bounding_box());
 }
 
 bool bvh_node::hit(const ray& r, interval ray_t, hit_record& rec) const {
