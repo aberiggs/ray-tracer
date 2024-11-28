@@ -1,7 +1,9 @@
 # ray-tracer
 A simple CPU based brute force path tracer written in **C++**. 
 
-## Building
+<details>
+<Summary><h2>Building</h2></Summary>
+  
 From the root of the repository, do the following:
 ```sh
 mkdir build
@@ -10,6 +12,7 @@ cmake ..
 make
 ```
 From this, binaries will be created and stored in `build/bin`.
+</details>
 
 ## Images
 ![Final Render](/images/final.png)
@@ -20,3 +23,4 @@ From this, binaries will be created and stored in `build/bin`.
 
 ## References
 - [Ray Tracing in One Weekend](https://raytracing.github.io/books/RayTracingInOneWeekend.html)
+- [Ray Tracing: The Next Week](https://raytracing.github.io/books/RayTracingTheNextWeek.html)
