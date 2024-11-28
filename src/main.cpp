@@ -7,7 +7,7 @@ using namespace std;
 
 int main(int argc, char **argv) {
     camera cam;
-    hittable_list world = scene_spheres(cam);
+    hittable_list world = scene_quads(cam);
     // Optimize with BVH - TODO: Make argument
     world = hittable_list(make_shared<bvh_node>(world));
 

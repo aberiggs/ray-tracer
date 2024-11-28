@@ -10,3 +10,6 @@ hittable_list scene_spheres(camera& cam);
 
 // Render image of a scene with moving spheres
 hittable_list scene_moving_spheres(camera& cam);
+
+// Render image of a scene with quadrilaterals
+hittable_list scene_quads(camera& cam);

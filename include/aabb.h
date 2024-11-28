@@ -17,4 +17,7 @@ public:
 
     bool hit(const ray& r, interval ray_t) const;
     int longest_axis() const;
+
+private:
+    void pad_to_minimums();
 };
