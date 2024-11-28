@@ -16,6 +16,7 @@ aabb::aabb(const point3& a, const point3& b) {
 aabb::aabb(const aabb& a, const aabb& b) : x(a.x, b.x), y(a.y, b.y), z(a.z, b.z) {
 }
 
+
 const interval& aabb::axis_interval(int n) const {
     if (n == 1) return y;
     else if (n == 2) return z;
@@ -59,4 +60,12 @@ void aabb::pad_to_minimums() {
     if (x.size() < delta) x = x.expand(delta);
     if (y.size() < delta) y = y.expand(delta);
     if (z.size() < delta) z = z.expand(delta);
+}
+
+aabb operator+(const aabb& bbox, const vec3& offset) {
+    return {bbox.x + offset.x(), bbox.y + offset.y(), bbox.z + offset.z()};
+}
+
+aabb operator+(const vec3& offset, const aabb& bbox) {
+    return bbox + offset; 
 }

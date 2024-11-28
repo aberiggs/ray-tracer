@@ -8,7 +8,7 @@
 using std::make_shared;
 using std::shared_ptr;
 
-hittable_list scene_spheres(camera& cam) {
+hittable_list scene::spheres(camera& cam) {
     hittable_list world;
     auto ground_material = make_shared<lambertian>(color(0.5, 0.5, 0.5));
     world.add(make_shared<sphere>(point3(0,-1000,0), 1000, ground_material));
@@ -54,6 +54,7 @@ hittable_list scene_spheres(camera& cam) {
     cam.image_width       = 1200;
     cam.samples_per_pixel = 500;
     cam.max_depth         = 50;
+    cam.background        = color(0.70, 0.80, 1.00);
 
     cam.vfov     = 20;
     cam.lookfrom = point3(13,2,3);
@@ -66,7 +67,7 @@ hittable_list scene_spheres(camera& cam) {
     return world;
 }
 
-hittable_list scene_moving_spheres(camera& cam) {
+hittable_list scene::moving_spheres(camera& cam) {
     hittable_list world;
     auto ground_material = make_shared<lambertian>(color(0.5, 0.5, 0.5));
     world.add(make_shared<sphere>(point3(0,-1000,0), 1000, ground_material));
@@ -113,6 +114,7 @@ hittable_list scene_moving_spheres(camera& cam) {
     cam.image_width       = 400;
     cam.samples_per_pixel = 100;
     cam.max_depth         = 50;
+    cam.background        = color(0.70, 0.80, 1.00);
 
     cam.vfov     = 20;
     cam.lookfrom = point3(13,2,3);
@@ -125,7 +127,7 @@ hittable_list scene_moving_spheres(camera& cam) {
     return world;
 }
 
-hittable_list scene_quads(camera& cam) {
+hittable_list scene::quads(camera& cam) {
     hittable_list world;
 
     // Materials
@@ -146,10 +148,119 @@ hittable_list scene_quads(camera& cam) {
     cam.image_width       = 400;
     cam.samples_per_pixel = 100;
     cam.max_depth         = 50;
+    cam.background        = color(0.70, 0.80, 1.00);
 
     cam.vfov     = 80;
     cam.lookfrom = point3(0,0,9);
     cam.lookat   = point3(0,0,0);
+    cam.vup      = vec3(0,1,0);
+
+    cam.defocus_angle = 0;
+
+    return world;
+}
+
+hittable_list scene::simple_light(camera& cam) {
+    hittable_list world;
+
+    auto obj_color = make_shared<solid_color>(color(1.0, 0.35, 0.24));
+    world.add(make_shared<sphere>(point3(0,-1000,0), 1000, make_shared<lambertian>(color(0.8, 0.8, 0.8))));
+    world.add(make_shared<sphere>(point3(0,2,0), 2, make_shared<lambertian>(obj_color)));
+
+    auto difflight = make_shared<diffuse_light>(color(4,4,4));
+    world.add(make_shared<quad>(point3(3, 1, -2), vec3(2, 0, 0), vec3(0, 2, 0), difflight));
+
+    cam.aspect_ratio      = 1.0;
+    cam.image_width       = 400;
+    cam.samples_per_pixel = 100;
+    cam.max_depth         = 50;
+    cam.background        = color(0.05, 0.05, 0.05);
+
+    cam.vfov     = 20;
+    cam.lookfrom = point3(26,3,6);
+    cam.lookat   = point3(0,2,0);
+    cam.vup      = vec3(0,1,0);
+
+    cam.defocus_angle = 0;
+
+    return world;
+}
+
+hittable_list scene::cornell_box(camera& cam) {
+    hittable_list world;
+
+    auto red   = make_shared<lambertian>(color(0.65, 0.05, 0.05));
+    auto white = make_shared<lambertian>(color(0.9, 0.9, 0.9));
+    auto green = make_shared<lambertian>(color(0.12, 0.45, 0.15));
+    auto light = make_shared<diffuse_light>(color(15, 15, 15));
+
+    world.add(make_shared<quad>(point3(555,0,0), vec3(0,555,0), vec3(0,0,555), green));
+    world.add(make_shared<quad>(point3(0,0,0), vec3(0,555,0), vec3(0,0,555), red));
+    world.add(make_shared<quad>(point3(343, 554, 332), vec3(-130,0,0), vec3(0,0,-105), light));
+    world.add(make_shared<quad>(point3(0,0,0), vec3(555,0,0), vec3(0,0,555), white));
+    world.add(make_shared<quad>(point3(555,555,555), vec3(-555,0,0), vec3(0,0,-555), white));
+    world.add(make_shared<quad>(point3(0,0,555), vec3(555,0,0), vec3(0,555,0), white));
+
+    shared_ptr<hittable> box1 = box(point3(0,0,0), point3(165, 330, 165), white);
+    box1 = make_shared<rotate_y>(box1, 15);
+    box1 = make_shared<translate>(box1, vec3(265,0,295));
+    world.add(box1);
+
+    shared_ptr<hittable> box2 = box(point3(0,0,0), point3(165, 165, 165), white);
+    box2 = make_shared<rotate_y>(box2, -18);
+    box2 = make_shared<translate>(box2, vec3(130,0,65));
+    world.add(box2);
+
+    cam.aspect_ratio      = 1.0;
+    cam.image_width       = 600;
+    cam.samples_per_pixel = 200;
+    cam.max_depth         = 50;
+    cam.background        = color(0,0,0);
+
+    cam.vfov     = 40;
+    cam.lookfrom = point3(278, 278, -800);
+    cam.lookat   = point3(278, 278, 0);
+    cam.vup      = vec3(0,1,0);
+
+    cam.defocus_angle = 0;
+
+    return world;
+}
+
+hittable_list scene::cornell_box_alt1(camera& cam) {
+    hittable_list world;
+
+    auto red   = make_shared<lambertian>(color(0.65, 0.05, 0.05));
+    auto white = make_shared<lambertian>(color(0.9, 0.9, 0.9));
+    auto green = make_shared<lambertian>(color(0.12, 0.45, 0.15));
+    auto light = make_shared<diffuse_light>(color(1, 1, 1));
+
+    world.add(make_shared<quad>(point3(555,0,0), vec3(0,555,0), vec3(0,0,555), green));
+    world.add(make_shared<quad>(point3(0,0,0), vec3(0,555,0), vec3(0,0,555), red));
+    world.add(make_shared<quad>(point3(477, 554, 477), vec3(-400,0,0), vec3(0,0,-400), light));    
+    world.add(make_shared<quad>(point3(0,0,0), vec3(555,0,0), vec3(0,0,555), white));
+    world.add(make_shared<quad>(point3(555,555,555), vec3(-555,0,0), vec3(0,0,-555), white));
+    world.add(make_shared<quad>(point3(0,0,555), vec3(555,0,0), vec3(0,555,0), white));
+
+    shared_ptr<hittable> box1 = box(point3(0,0,0), point3(165, 330, 165), white);
+    box1 = make_shared<rotate_y>(box1, 15);
+    box1 = make_shared<translate>(box1, vec3(265,0,295));
+    world.add(box1);
+
+    shared_ptr<hittable> box2 = box(point3(0,0,0), point3(165, 165, 165), white);
+    box2 = make_shared<rotate_y>(box2, -18);
+    box2 = make_shared<translate>(box2, vec3(130,0,65));
+    world.add(box2);
+
+    cam.aspect_ratio      = 1.0;
+    cam.image_width       = 600;
+    cam.samples_per_pixel = 200;
+    cam.max_depth         = 50;
+    cam.background        = color(0,0,0);
+
+    cam.vfov     = 40;
+    cam.lookfrom = point3(278, 278, -800);
+    cam.lookat   = point3(278, 278, 0);
     cam.vup      = vec3(0,1,0);
 
     cam.defocus_angle = 0;

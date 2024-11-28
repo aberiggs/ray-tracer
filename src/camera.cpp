@@ -114,16 +114,15 @@ color camera::ray_color(const ray& r, const hittable& world, int depth) const {
     }
 
     hit_record rec;
-    if (world.hit(r, {0.001, inf}, rec)) {
-        ray scattered;
-        color attenuation;
-        if (rec.mat_ptr->scatter(r, rec, attenuation, scattered)) {
-            return attenuation * ray_color(scattered, world, depth - 1);
-        }
-        return {0, 0, 0};
-    }
-
-    vec3 unit_direction = unit_vector(r.direction());
-    auto a = 0.5 * (unit_direction.y() + 1.0);
-    return (1.0 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0);
+    if (!world.hit(r, {0.001, inf}, rec))
+        return background;
+    
+    ray scattered;
+    color attenuation;
+    color color_from_emission = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
+    if (!rec.mat_ptr->scatter(r, rec, attenuation, scattered)) 
+        return color_from_emission;
+    
+    color color_from_scatter = attenuation * ray_color(scattered, world, depth - 1);
+    return color_from_emission + color_from_scatter;
 }

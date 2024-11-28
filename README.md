@@ -14,5 +14,9 @@ From this, binaries will be created and stored in `build/bin`.
 ## Images
 ![Final Render](/images/final.png)
 
+![Cornell Box](/images/cornell3_highsamp.png)
+
+![Lighting Example](/images/light3.png)
+
 ## References
 - [Ray Tracing in One Weekend](https://raytracing.github.io/books/RayTracingInOneWeekend.html)

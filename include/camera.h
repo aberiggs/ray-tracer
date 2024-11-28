@@ -10,6 +10,7 @@ public:
     int    image_width       {100};
     int    samples_per_pixel {10};
     int    max_depth         {10};
+    color  background        {0, 0, 0};
 
     double vfov     {90.0};
     point3 lookfrom {0, 0, 0};

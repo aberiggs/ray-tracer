@@ -13,6 +13,7 @@ public:
     aabb(const point3& a, const point3& b);
     aabb(const aabb& a, const aabb& b);
 
+
     const interval& axis_interval(int n) const;
 
     bool hit(const ray& r, interval ray_t) const;
@@ -21,3 +22,6 @@ public:
 private:
     void pad_to_minimums();
 };
+
+aabb operator+(const aabb& bbox, const vec3& offset);
+aabb operator+(const vec3& offset, const aabb& bbox);
