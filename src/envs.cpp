@@ -1,5 +1,6 @@
 #include "envs.h" // self
 
+#include "color.h"
 #include "material.h"
 #include "quad.h"
 #include "sphere.h"
@@ -186,6 +187,36 @@ hittable_list scene::simple_light(camera& cam) {
     return world;
 }
 
+hittable_list scene::sphere_emit(camera& cam) {
+    hittable_list world;
+
+    world.add(make_shared<sphere>(point3(0,-1000,0), 1000, make_shared<lambertian>(color(0.8, 0.8, 0.8)))); // Ground
+    
+    auto plain = make_shared<lambertian>(color(1.0, 1.0, 1.0));
+    world.add(make_shared<sphere>(point3(0,1,0), 1, plain));
+
+    auto emission1 = make_shared<diffuse_light>(color(0.5, 0.5, 0.24));
+    world.add(make_shared<sphere>(point3(-2,1,2), 1, emission1));
+    auto emission2 = make_shared<diffuse_light>(color(0.5, 0.24, 0.5)); 
+    world.add(make_shared<sphere>(point3(2,1,2), 1, emission2));
+
+
+    cam.aspect_ratio      = 1.0;
+    cam.image_width       = 400;
+    cam.samples_per_pixel = 100;
+    cam.max_depth         = 100;
+    cam.background        = color(0.05, 0.05, 0.05);
+
+    cam.vfov     = 20;
+    cam.lookfrom = point3(0,3,26);
+    cam.lookat   = point3(0,2,0);
+    cam.vup      = vec3(0,1,0);
+
+    cam.defocus_angle = 0;
+
+    return world;
+}
+
 hittable_list scene::cornell_box(camera& cam) {
     hittable_list world;
 
@@ -261,6 +292,84 @@ hittable_list scene::cornell_box_alt1(camera& cam) {
     cam.vfov     = 40;
     cam.lookfrom = point3(278, 278, -800);
     cam.lookat   = point3(278, 278, 0);
+    cam.vup      = vec3(0,1,0);
+
+    cam.defocus_angle = 0;
+
+    return world;
+}
+
+hittable_list scene::checkered_spheres(camera& cam) {
+    hittable_list world;
+
+    auto checker = make_shared<checker_texture>(0.32, color(.2, .3, .1), color(.9, .9, .9));
+
+    world.add(make_shared<sphere>(point3(0,-10, 0), 10, make_shared<lambertian>(checker)));
+    world.add(make_shared<sphere>(point3(0, 10, 0), 10, make_shared<lambertian>(checker)));
+
+    cam.aspect_ratio      = 16.0 / 9.0;
+    cam.image_width       = 400;
+    cam.samples_per_pixel = 100;
+    cam.max_depth         = 50;
+    cam.background        = color(0.70, 0.80, 1.00);
+
+    cam.vfov     = 20;
+    cam.lookfrom = point3(13,2,3);
+    cam.lookat   = point3(0,0,0);
+    cam.vup      = vec3(0,1,0);
+
+    cam.defocus_angle = 0;
+
+    return world;
+}
+
+hittable_list scene::pastel_box(camera& cam) {
+    hittable_list world;
+
+    auto white = make_shared<lambertian>(color(0.5, 0.5, 0.5));
+    auto red   = make_shared<lambertian>(0.6 * int_to_color(255,197,211));
+    auto blue = make_shared<lambertian>(0.6 * int_to_color(179, 235, 242));
+    auto white_light = make_shared<diffuse_light>(color(5, 5, 5));
+    auto blue_light = make_shared<diffuse_light>(int_to_color(179, 235, 242), 1.0);
+    auto red_light  = make_shared<diffuse_light>(int_to_color(255, 197, 211), 1.0);
+    auto mirror = make_shared<metal>(color(0.7, 0.6, 0.5), 0.05);
+    auto plain = make_shared<lambertian>(color(1.0, 1.0, 1.0));
+
+
+    // Box
+    world.add(make_shared<quad>(point3(800, 0, 0), vec3(0, 800, 0), vec3(0, 0, 800), blue));
+    world.add(make_shared<quad>(point3(0, 0, 0), vec3(0, 800, 0), vec3(0, 0, 800), red));
+    world.add(make_shared<quad>(point3(0, 0, 0), vec3(800, 0, 0), vec3(0, 0, 800), white));
+    world.add(make_shared<quad>(point3(800, 800, 800), vec3(-800, 0, 0), vec3(0, 0, -800), white)); // Top
+    world.add(make_shared<quad>(point3(500, 799, 500), vec3(-200,0,0), vec3(0,0,-200), white_light));    
+    world.add(make_shared<quad>(point3(0, 0, 800), vec3(800, 0, 0), vec3(0, 800, 0), white));
+
+    // Light sphere at top corners
+    world.add(make_shared<sphere>(point3(700, 700, 700), 80, blue_light));
+    world.add(make_shared<sphere>(point3(100, 700, 700), 80, red_light));
+
+    // Rotated boxes on the ground
+    shared_ptr<hittable> box1 = box(point3(0,0,0), point3(200, 200, 200), plain);
+    box1 = make_shared<rotate_y>(box1, 15);
+    box1 = make_shared<translate>(box1, vec3(500,0,400));
+    world.add(box1);
+    shared_ptr<hittable> box2 = box(point3(0,0,0), point3(200, 400, 200), plain);
+    box2 = make_shared<rotate_y>(box2, 30);
+    box2 = make_shared<translate>(box2, vec3(100,0,600));
+    world.add(box2);
+
+    // Add metal sphere on the ground
+    world.add(make_shared<sphere>(point3(350, 100, 350), 100, mirror));
+
+    cam.aspect_ratio      = 1.0;
+    cam.image_width       = 800;
+    cam.samples_per_pixel = 500;
+    cam.max_depth         = 50;
+    cam.background        = color(0,0,0);
+
+    cam.vfov     = 40;
+    cam.lookfrom = point3(400, 400, -850);
+    cam.lookat   = point3(400, 400, 0);
     cam.vup      = vec3(0,1,0);
 
     cam.defocus_angle = 0;

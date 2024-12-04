@@ -101,14 +101,15 @@ private:
 
 class diffuse_light : public material {
 public:
-    diffuse_light(std::shared_ptr<texture> tex_ptr) : tex_ptr(tex_ptr) {}
-    diffuse_light(const color& emit) : tex_ptr(std::make_shared<solid_color>(emit)) {}
+    diffuse_light(std::shared_ptr<texture> tex_ptr, double intensity = 1.0) : tex_ptr(tex_ptr), intensity(intensity) {}
+    diffuse_light(const color& color, double intensity = 1.0) : tex_ptr(std::make_shared<solid_color>(color)), intensity(intensity) {}
 
     color emitted(double u, double v, const point3& p) const override {
-        return tex_ptr->value(u, v, p); 
+        auto emission = tex_ptr->value(u, v, p) * intensity;
+        return emission;
     }
 
 private:
     std::shared_ptr<texture> tex_ptr;
+    double intensity;
 };
-

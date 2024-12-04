@@ -18,10 +18,17 @@ hittable_list quads(camera& cam);
 // Render image of a scene with a simple light
 hittable_list simple_light(camera& cam);
 
+hittable_list sphere_emit(camera& cam);
+
 // Render image of a scene with a cornell box
 hittable_list cornell_box(camera& cam);
 
 // Render image of a scene with a cornell box that has a bigger overhead light
 hittable_list cornell_box_alt1(camera& cam);
+
+// Render image of a scene with 2 checkered spheres
+hittable_list checkered_spheres(camera& cam);
+
+hittable_list pastel_box(camera& cam);
 
 } // namespace scene
