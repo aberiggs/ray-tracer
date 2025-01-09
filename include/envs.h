@@ -31,4 +31,6 @@ hittable_list checkered_spheres(camera& cam);
 
 hittable_list pastel_box(camera& cam);
 
+hittable_list cornell_box_smoke(camera& cam);
+
 } // namespace scene
