@@ -50,6 +50,30 @@ std::vector<color> camera::render(const hittable& world) {
     return output_buffer;
 }
 
+void camera::render_sample(const hittable& world, std::vector<color>& output_buffer) {
+    std::vector<std::future<void>> futures;
+    for (int j = 0; j < image_height; ++j) {
+        if (j % 10 == 0) { // Prevent too many threads from being created at a time
+            for (auto& future : futures) {
+                future.wait();
+            }
+        }
+
+        futures.push_back(std::async(std::launch::async, [this, &world, &output_buffer, j]() {
+            for (int i = 0; i < image_width; ++i) {
+                color pixel_color(0, 0, 0);
+                    ray r = get_ray(i, j);
+                    pixel_color = ray_color(r, world, max_depth);
+                output_buffer[j * image_width + i] += pixel_color; // TODO: consider overflow?
+            }
+        }));
+    }
+
+    for (auto& future : futures) {
+        future.wait();
+    }
+}
+
 void camera::initialize() {
     image_height = static_cast<int>(image_width / aspect_ratio);
     image_height = (image_height < 1) ? 1 : image_height; // Ensure height is at least 1

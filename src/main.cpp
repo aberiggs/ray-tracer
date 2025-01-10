@@ -121,15 +121,18 @@ int main(int, char**)
     io.IniFilename = nullptr;
     EMSCRIPTEN_MAINLOOP_BEGIN
 #else
-    std::vector<unsigned char> image_data; // rgba values of each pixel
-    render_scene(image_data);
-    GLuint image_texture;
-    glGenTextures(1, &image_texture);
-    glBindTexture(GL_TEXTURE_2D, image_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 600, 600, 0, GL_RGB, GL_UNSIGNED_BYTE, image_data.data());
-    glBindTexture(GL_TEXTURE_2D, 0);
+    std::vector<unsigned char> image_data {}; // rgba values of each pixel
+    camera cam;
+    hittable_list world = scene::cornell_box_smoke(cam);
+    // Optimize with BVH - TODO: Make option 
+    world = hittable_list(std::make_shared<bvh_node>(world));
+    cam.initialize();
+
+    // Image render data
+    long sample_count = 0;
+    std::vector<color> pixel_vec(cam.image_width * cam.image_height); // rgb values of each pixel
+
+    std::cout << "Starting render:\n" << "Image size: " << cam.image_width << "x" << cam.image_height << "\n" << "Max depth: " << cam.max_depth << "\n\n";
 
     while (!glfwWindowShouldClose(window))
 #endif
@@ -153,31 +156,31 @@ int main(int, char**)
     
 
 
-        // Display the texture as an image
+        // Perform render tasks and display
         {
-            ImGui::Begin("Rendered Image");
-            ImGui::Image((ImTextureID)(intptr_t)image_texture, ImVec2(600, 600));
-            ImGui::End();
-        }
+            std::cout << "Rendering sample #" << sample_count << std::endl;
+            ++sample_count;
 
-        // Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-        {
-            static float f = 0.0f;
-            static int counter = 0;
+            // Perform a render task
+            cam.render_sample(world, pixel_vec);
+            image_data.clear();
+            for (const auto& c : pixel_vec) {
+                const auto sampled_color = c / sample_count;
+                image_data.push_back(static_cast<unsigned char>(get_color_component(sampled_color, 0)));
+                image_data.push_back(static_cast<unsigned char>(get_color_component(sampled_color, 1)));
+                image_data.push_back(static_cast<unsigned char>(get_color_component(sampled_color, 2)));
+            }
 
-            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
 
-            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-            if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-                counter++;
-            ImGui::SameLine();
-            ImGui::Text("counter = %d", counter);
-
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+            GLuint image_texture;
+            glGenTextures(1, &image_texture);
+            glBindTexture(GL_TEXTURE_2D, image_texture);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cam.image_width, cam.image_height, 0, GL_RGB, GL_UNSIGNED_BYTE, image_data.data());
+            glBindTexture(GL_TEXTURE_2D, 0);
+            ImGui::Begin("Renderer Output");
+            ImGui::Image((ImTextureID)(intptr_t)image_texture, ImVec2(cam.image_width, cam.image_height));
             ImGui::End();
         }
 
@@ -214,8 +217,6 @@ void render_scene(std::vector<unsigned char>& pixel_data) {
     hittable_list world = scene::cornell_box_smoke(cam);
     // Optimize with BVH - TODO: Make option 
     world = hittable_list(std::make_shared<bvh_node>(world));
-
-    // cam.samples_per_pixel = 10;
 
     std::vector<color> pixel_vec {cam.render(world)}; // rgb values of each pixel
     for (const auto& c : pixel_vec) {

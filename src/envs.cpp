@@ -381,7 +381,7 @@ hittable_list scene::pastel_box(camera& cam) {
 hittable_list scene::cornell_box_smoke(camera& cam) {
     hittable_list world;
 
-   auto red   = make_shared<lambertian>(color(.65, .05, .05));
+    auto red   = make_shared<lambertian>(color(.65, .05, .05));
     auto white = make_shared<lambertian>(color(.73, .73, .73));
     auto green = make_shared<lambertian>(color(.12, .45, .15));
     auto light = make_shared<diffuse_light>(color(7, 7, 7));

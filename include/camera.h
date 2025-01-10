@@ -8,6 +8,7 @@ class camera {
 public:
     double aspect_ratio      {1.0};
     int    image_width       {100};
+    int    image_height;
     int    samples_per_pixel {10};
     int    max_depth         {10};
     color  background        {0, 0, 0};
@@ -21,9 +22,11 @@ public:
     double focus_dist {10};
     
     std::vector<color> render(const hittable& world);
+    void render_sample(const hittable& world, std::vector<color>& output_buffer);
+
+    void initialize();
 
 private:
-    int image_height;
     double pixel_samples_scale;
     point3 center;
     point3 pixel00_loc;
@@ -32,8 +35,6 @@ private:
     vec3 u, v, w;
     vec3 defocus_disk_v;
     vec3 defocus_disk_u;
-
-    void initialize();
 
     ray get_ray(int i, int j) const;
     
