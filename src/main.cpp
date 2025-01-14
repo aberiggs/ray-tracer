@@ -121,18 +121,21 @@ int main(int, char**)
     io.IniFilename = nullptr;
     EMSCRIPTEN_MAINLOOP_BEGIN
 #else
+
+
+    // Ray Tracer setup
     std::vector<unsigned char> image_data {}; // rgba values of each pixel
     camera cam;
-    hittable_list world = scene::cornell_box_smoke(cam);
+    hittable_list world = scene::simple_light(cam);
     // Optimize with BVH - TODO: Make option 
     world = hittable_list(std::make_shared<bvh_node>(world));
     cam.initialize();
 
-    // Image render data
-    long sample_count = 0;
-    std::vector<color> pixel_vec(cam.image_width * cam.image_height); // rgb values of each pixel
-
-    std::cout << "Starting render:\n" << "Image size: " << cam.image_width << "x" << cam.image_height << "\n" << "Max depth: " << cam.max_depth << "\n\n";
+    // Start rendering asynchronously
+    auto world_ptr = std::make_shared<hittable_list>(world);
+    cam.render_async(world_ptr);
+    
+    std::cout << "Starting app...\n";
 
     while (!glfwWindowShouldClose(window))
 #endif
@@ -149,40 +152,48 @@ int main(int, char**)
             continue;
         }
 
+        // Close window if ESC is pressed
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+            glfwSetWindowShouldClose(window, GLFW_TRUE);
+
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
     
 
-
         // Perform render tasks and display
         {
-            std::cout << "Rendering sample #" << sample_count << std::endl;
-            ++sample_count;
-
-            // Perform a render task
-            cam.render_sample(world, pixel_vec);
-            image_data.clear();
-            for (const auto& c : pixel_vec) {
-                const auto sampled_color = c / sample_count;
-                image_data.push_back(static_cast<unsigned char>(get_color_component(sampled_color, 0)));
-                image_data.push_back(static_cast<unsigned char>(get_color_component(sampled_color, 1)));
-                image_data.push_back(static_cast<unsigned char>(get_color_component(sampled_color, 2)));
-            }
-
+            // TODO: Modify update rate?
+            std::vector<unsigned char> image_data {};
+            int image_width, image_height;
+            cam.render_data(image_data, image_width, image_height);
 
             GLuint image_texture;
             glGenTextures(1, &image_texture);
             glBindTexture(GL_TEXTURE_2D, image_texture);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cam.image_width, cam.image_height, 0, GL_RGB, GL_UNSIGNED_BYTE, image_data.data());
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_width, image_height, 0, GL_RGB, GL_UNSIGNED_BYTE, image_data.data());
             glBindTexture(GL_TEXTURE_2D, 0);
             ImGui::Begin("Renderer Output");
-            ImGui::Image((ImTextureID)(intptr_t)image_texture, ImVec2(cam.image_width, cam.image_height));
+            ImGui::Image((ImTextureID)(intptr_t)image_texture, ImVec2(image_width, image_height));
             ImGui::End();
         }
+
+        // Info window
+        {
+            ImGui::Begin("Info");
+            ImGui::Text("Sprocket's Ray Tracer");
+            ImGui::Text("By: Sprocket");
+            ImGui::Text("Press 'ESC' to exit");
+
+            ImGui::Text("Frame rate: %.1f FPS", ImGui::GetIO().Framerate);
+            ImGui::Text("Samples: %ld", cam.get_num_samples());
+            ImGui::End();
+        }
+        
+
 
         // Rendering
         ImGui::Render();
@@ -207,21 +218,8 @@ int main(int, char**)
     glfwDestroyWindow(window);
     glfwTerminate();
 
+    // Stop camera rendering
+    cam.stop();
+
     return 0;
-}
-
-
-
-void render_scene(std::vector<unsigned char>& pixel_data) {
-    camera cam;
-    hittable_list world = scene::cornell_box_smoke(cam);
-    // Optimize with BVH - TODO: Make option 
-    world = hittable_list(std::make_shared<bvh_node>(world));
-
-    std::vector<color> pixel_vec {cam.render(world)}; // rgb values of each pixel
-    for (const auto& c : pixel_vec) {
-        pixel_data.push_back(static_cast<unsigned char>(get_color_component(c, 0)));
-        pixel_data.push_back(static_cast<unsigned char>(get_color_component(c, 1)));
-        pixel_data.push_back(static_cast<unsigned char>(get_color_component(c, 2)));
-    }
 }

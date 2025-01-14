@@ -4,11 +4,12 @@
 #include "hittable.h"
 #include "ray.h"
 
+#include <thread>
+
 class camera {
 public:
     double aspect_ratio      {1.0};
     int    image_width       {100};
-    int    image_height;
     int    samples_per_pixel {10};
     int    max_depth         {10};
     color  background        {0, 0, 0};
@@ -22,11 +23,25 @@ public:
     double focus_dist {10};
     
     std::vector<color> render(const hittable& world);
-    void render_sample(const hittable& world, std::vector<color>& output_buffer);
+
+    void render_async(const std::shared_ptr<hittable> scene); // Continuously render samples
+    std::vector<color> render_sample(const hittable& scene);
+
+    void render_data(std::vector<unsigned char>& pixel_data, int& width, int& height);
+
+    long get_num_samples() const { return num_samples; }
+
+    void stop();
 
     void initialize();
 
 private:
+    std::atomic<bool> should_render {false};
+    std::atomic<long> num_samples {0};
+    std::vector<std::atomic<color>> pixel_samples {}; // 2D array of pixel samples
+    std::thread render_thread {};
+
+    int    image_height;
     double pixel_samples_scale;
     point3 center;
     point3 pixel00_loc;

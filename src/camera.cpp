@@ -50,27 +50,104 @@ std::vector<color> camera::render(const hittable& world) {
     return output_buffer;
 }
 
-void camera::render_sample(const hittable& world, std::vector<color>& output_buffer) {
-    std::vector<std::future<void>> futures;
-    for (int j = 0; j < image_height; ++j) {
-        if (j % 10 == 0) { // Prevent too many threads from being created at a time
-            for (auto& future : futures) {
-                future.wait();
-            }
-        }
+void camera::render_async(const std::shared_ptr<hittable> scene) {
 
-        futures.push_back(std::async(std::launch::async, [this, &world, &output_buffer, j]() {
-            for (int i = 0; i < image_width; ++i) {
-                color pixel_color(0, 0, 0);
-                    ray r = get_ray(i, j);
-                    pixel_color = ray_color(r, world, max_depth);
-                output_buffer[j * image_width + i] += pixel_color; // TODO: consider overflow?
-            }
-        }));
+    // TODO: Lock
+
+    should_render = false;
+    // Join the previous thread if it's still running
+    if (render_thread.joinable()) {
+        render_thread.join();
     }
 
-    for (auto& future : futures) {
-        future.wait();
+    // Reset for the new scene
+    should_render = true;
+    pixel_samples = std::vector<std::atomic<color>>(image_width * image_height);
+
+
+    std::cout << "Starting async render\n";
+    // Start rendering asynchronously
+    render_thread = std::thread([this, scene]() {
+        // Launch additional threads to render samples
+        int num_workers = 5;
+
+        std::vector<std::thread> workers;
+
+        for (int w = 0; w < num_workers; ++w) {
+            workers.push_back(std::thread([this, scene]() {
+                while (should_render) {
+                    auto sample = render_sample(*scene);
+                    for (int i = 0; i < image_width * image_height; ++i) {
+                        pixel_samples[i] = pixel_samples[i] + sample[i];
+                    }
+                    ++num_samples;
+                }
+            }));
+        }
+
+        for (auto& worker : workers) {
+            if (worker.joinable())
+                worker.join();
+        }
+
+    });
+}
+
+std::vector<color> camera::render_sample(const hittable& scene) {
+    std::vector<color> sample(image_width * image_height);
+
+    for (int i = 0; i < image_height; ++i) {
+        for (int j = 0; j < image_width; ++j) {
+            color pixel_color(0, 0, 0);
+                ray r = get_ray(j, i);
+                pixel_color = ray_color(r, scene, max_depth);
+            sample[i * image_width + j] = pixel_color;
+        }
+    }
+
+    return sample;
+}
+
+void camera::render_data(std::vector<unsigned char>& pixel_data, int& width, int& height) {
+    width = image_width;
+    height = image_height;
+
+    pixel_data = std::vector<unsigned char>(width * height * 3);
+
+    if (num_samples == 0) {
+        for (int i = 0; i < image_width * image_height; ++i) {
+            pixel_data.push_back(0);
+            pixel_data.push_back(0);
+            pixel_data.push_back(0);
+        }
+    }
+
+    // Iterate through pixel samples and average them
+    for (int i = 0; i < image_height; ++i) {
+        for (int j = 0; j < image_width; ++j) {
+            auto pixel = pixel_samples[i * image_width + j].load() / num_samples;
+            pixel_data[(i * image_width + j) * 3] = get_color_component(pixel, 0);
+            pixel_data[(i * image_width + j) * 3 + 1] = get_color_component(pixel, 1);
+            pixel_data[(i * image_width + j) * 3 + 2] = get_color_component(pixel, 2);
+        }
+    }
+
+    // Benchmark time 
+    // std::chrono::duration<double> total_time(0);
+    // for (auto& pixel : pixel_samples) {
+        // // auto start = std::chrono::high_resolution_clock::now();
+        // auto pixel_final = pixel / num_samples;
+        // pixel_data[pixel_data.size() - 3] = get_color_component(pixel_final, 0);
+        // // total_time += std::chrono::high_resolution_clock::now() - start;
+    // }
+
+    // std::cout << "Total time: " << total_time.count() << "s\n";
+}
+
+void camera::stop() {
+    should_render = false;
+    if (render_thread.joinable()) {
+        render_thread.join();
     }
 }
 
