@@ -6,52 +6,7 @@
 #include <future>
 #include <vector>
 
-std::vector<color> camera::render(const hittable& world) {
-    initialize();
-
-    // Create output buffer
-    std::vector<color> output_buffer(image_width * image_height);
-
-    std::clog << "Starting render:\n";
-    std::clog << "Image size: " << image_width << "x" << image_height << "\n";
-    std::clog << "Samples per pixel: " << samples_per_pixel << "\n";
-    std::clog << "Max depth: " << max_depth << "\n\n";
-
-    int completed_rows {0};
-    std::mutex completed_rows_mutex;
-
-    std::vector<std::future<void>> futures;
-    for (int j = 0; j < image_height; ++j) {
-        if (j % 10 == 0) { // Prevent too many threads from being created at a time
-            for (auto& future : futures) {
-                future.wait();
-            }
-        }
-        futures.push_back(std::async(std::launch::async, [this, &world, &output_buffer, &completed_rows, &completed_rows_mutex, j]() {
-            for (int i = 0; i < image_width; ++i) {
-                color pixel_color(0, 0, 0);
-                for (int s = 0; s < samples_per_pixel; ++s) {
-                    ray r = get_ray(i, j);
-                    pixel_color += ray_color(r, world, max_depth);
-                }
-                output_buffer[j * image_width + i] = pixel_color * pixel_samples_scale;
-            }
-            std::lock_guard<std::mutex> lock(completed_rows_mutex);
-            ++completed_rows;
-            std::clog << "\rProgress: " << completed_rows << "/" << image_height << std::flush;
-        }));
-    }
-
-    for (auto& future : futures) {
-        future.wait();
-    }
-
-    std::clog << "\n\nDone.\n";
-    return output_buffer;
-}
-
 void camera::render_async(const std::shared_ptr<hittable> scene) {
-
     // TODO: Lock
 
     should_render = false;
@@ -60,12 +15,7 @@ void camera::render_async(const std::shared_ptr<hittable> scene) {
         render_thread.join();
     }
 
-    // Reset for the new scene
     should_render = true;
-    pixel_samples = std::vector<std::atomic<color>>(image_width * image_height);
-
-
-    std::cout << "Starting async render\n";
     // Start rendering asynchronously
     render_thread = std::thread([this, scene]() {
         // Launch additional threads to render samples
@@ -108,11 +58,9 @@ std::vector<color> camera::render_sample(const hittable& scene) {
     return sample;
 }
 
-void camera::render_data(std::vector<unsigned char>& pixel_data, int& width, int& height) {
-    width = image_width;
-    height = image_height;
+void camera::render_data(std::vector<unsigned char>& pixel_data) {
 
-    pixel_data = std::vector<unsigned char>(width * height * 3);
+    pixel_data = std::vector<unsigned char>(image_width * image_height * 3);
 
     if (num_samples == 0) {
         for (int i = 0; i < image_width * image_height; ++i) {
@@ -131,17 +79,6 @@ void camera::render_data(std::vector<unsigned char>& pixel_data, int& width, int
             pixel_data[(i * image_width + j) * 3 + 2] = get_color_component(pixel, 2);
         }
     }
-
-    // Benchmark time 
-    // std::chrono::duration<double> total_time(0);
-    // for (auto& pixel : pixel_samples) {
-        // // auto start = std::chrono::high_resolution_clock::now();
-        // auto pixel_final = pixel / num_samples;
-        // pixel_data[pixel_data.size() - 3] = get_color_component(pixel_final, 0);
-        // // total_time += std::chrono::high_resolution_clock::now() - start;
-    // }
-
-    // std::cout << "Total time: " << total_time.count() << "s\n";
 }
 
 void camera::stop() {
@@ -186,6 +123,10 @@ void camera::initialize() {
     auto defocus_radius = focus_dist * std::tan(degrees_to_radians(defocus_angle) / 2);
     defocus_disk_u = u * defocus_radius;
     defocus_disk_v = v * defocus_radius;
+
+    // Reset for the new scene
+    pixel_samples = std::vector<std::atomic<color>>(image_width * image_height);
+    num_samples = 0;
 }
 
 ray camera::get_ray(int i, int j) const {

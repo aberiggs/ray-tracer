@@ -21,15 +21,18 @@ public:
 
     double defocus_angle {0};
     double focus_dist {10};
-    
-    std::vector<color> render(const hittable& world);
 
     void render_async(const std::shared_ptr<hittable> scene); // Continuously render samples
     std::vector<color> render_sample(const hittable& scene);
 
-    void render_data(std::vector<unsigned char>& pixel_data, int& width, int& height);
+    void render_data(std::vector<unsigned char>& pixel_data);
 
     long get_num_samples() const { return num_samples; }
+
+    int get_image_width() const { return image_width; }
+    int get_image_height() const { return image_height; }
+
+    bool is_rendering() const { return should_render; }
 
     void stop();
 

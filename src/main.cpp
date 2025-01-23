@@ -112,7 +112,7 @@ int main(int, char**)
     //IM_ASSERT(font != nullptr);
 
     // Our state
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    ImVec4 clear_color = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
 
     // Main loop
 #ifdef __EMSCRIPTEN__
@@ -124,9 +124,8 @@ int main(int, char**)
 
 
     // Ray Tracer setup
-    std::vector<unsigned char> image_data {}; // rgba values of each pixel
     camera cam;
-    hittable_list world = scene::simple_light(cam);
+    hittable_list world = scene::pastel_box(cam);
     // Optimize with BVH - TODO: Make option 
     world = hittable_list(std::make_shared<bvh_node>(world));
     cam.initialize();
@@ -134,8 +133,16 @@ int main(int, char**)
     // Start rendering asynchronously
     auto world_ptr = std::make_shared<hittable_list>(world);
     cam.render_async(world_ptr);
-    
-    std::cout << "Starting app...\n";
+
+    // Setup for render previewing
+    std::vector<unsigned char> image_data {}; // rgb values of each pixel
+    GLuint image_texture;
+    glGenTextures(1, &image_texture);
+    glBindTexture(GL_TEXTURE_2D, image_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
 
     while (!glfwWindowShouldClose(window))
 #endif
@@ -165,30 +172,50 @@ int main(int, char**)
         // Perform render tasks and display
         {
             // TODO: Modify update rate?
-            std::vector<unsigned char> image_data {};
-            int image_width, image_height;
-            cam.render_data(image_data, image_width, image_height);
+            int image_width {cam.get_image_height()};
+            int image_height {cam.get_image_height()};
+            // Update every 500 ms
+            // TODO: Make this a setting
+            static auto last_update = std::chrono::high_resolution_clock::now();
+            auto now = std::chrono::high_resolution_clock::now();
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update).count();
+            long long update_rate = 500;
 
-            GLuint image_texture;
-            glGenTextures(1, &image_texture);
-            glBindTexture(GL_TEXTURE_2D, image_texture);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_width, image_height, 0, GL_RGB, GL_UNSIGNED_BYTE, image_data.data());
-            glBindTexture(GL_TEXTURE_2D, 0);
+
+            if (elapsed > update_rate) {
+                cam.render_data(image_data);
+                glBindTexture(GL_TEXTURE_2D, image_texture);
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cam.get_image_width(), cam.get_image_height(), 0, GL_RGB, GL_UNSIGNED_BYTE, image_data.data());
+                glBindTexture(GL_TEXTURE_2D, 0);
+                last_update = std::chrono::high_resolution_clock::now();
+            }
+
             ImGui::Begin("Renderer Output");
-            ImGui::Image((ImTextureID)(intptr_t)image_texture, ImVec2(image_width, image_height));
+            if (!image_data.empty()) {
+                ImGui::Image((ImTextureID)(intptr_t)image_texture, ImVec2(image_width, image_height));
+            }
+            ImGui::SetWindowSize(ImVec2(image_width, image_height), ImGuiCond_FirstUseEver);
             ImGui::End();
         }
 
         // Info window
         {
             ImGui::Begin("Info");
+            ImGui::SetWindowSize(ImVec2(200, 100), ImGuiCond_FirstUseEver);
+
             ImGui::Text("Sprocket's Ray Tracer");
-            ImGui::Text("By: Sprocket");
             ImGui::Text("Press 'ESC' to exit");
 
-            ImGui::Text("Frame rate: %.1f FPS", ImGui::GetIO().Framerate);
+            // Checkbox to control rendering
+            static bool render = true;
+            ImGui::Checkbox("Render", &render);
+            if (render && !cam.is_rendering()) {
+                cam.render_async(world_ptr);
+            } else if (!render && cam.is_rendering()) {
+                cam.stop();
+            } 
+
+            ImGui::Text("Framerate (app): %.1f FPS", ImGui::GetIO().Framerate);
             ImGui::Text("Samples: %ld", cam.get_num_samples());
             ImGui::End();
         }
