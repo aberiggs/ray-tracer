@@ -35,7 +35,7 @@ public:
     bool is_rendering() const { return should_render; }
 
     // Halt rendering by killing the render thread + all workers
-    void stop();
+    void stop(bool join = true);
 
     // Reset the camera to its initial state
     void reset();

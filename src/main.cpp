@@ -201,33 +201,45 @@ int main(int, char**)
             ImGui::Begin("Info");
             ImGui::SetWindowSize(ImVec2(200, 100), ImGuiCond_FirstUseEver);
 
-            ImGui::Text("Sprocket's Ray Tracer");
-            ImGui::Text("Press 'ESC' to exit");
+            ImGui::Text("CONFIG");
+            ImGui::Spacing();
+            ImGui::Spacing();
+
+            // Number entry to control threads rendering
+            static int num_workers = 4;
+            ImGui::InputInt("Threads", &num_workers);
+            if (num_workers < 1) {
+                num_workers = 1;
+            }
 
             // Checkbox to control rendering
-            static bool render = true;
-            ImGui::Checkbox("Render", &render);
-            if (render && !cam.is_rendering()) {
-                cam.render_async(5);
-            } else if (!render && cam.is_rendering()) {
-                cam.stop();
+            if (cam.is_rendering()) {
+                if (ImGui::Button("Pause Render"))
+                    cam.stop(false);
+            } else if (cam.get_num_samples() != 0) {
+                if (ImGui::Button("Resume Render"))
+                    cam.render_async(num_workers);
+            } else {
+                if (ImGui::Button("Start Render"))
+                    cam.render_async(num_workers);
             }
 
             // Reset button
-            if (ImGui::Button("Reset")) {
+            if (cam.get_num_samples() != 0 && ImGui::Button("Reset Render")) {
                 cam.reset();
             }
 
-            // Save button
-            if (ImGui::Button("Save")) {
-                // Save image to file
-                std::cout << "Saving not implemented yet" << std::endl;
-            }
-
-            ImGui::Text("Samples: %ld", cam.get_num_samples());
- 
             ImGui::Separator();
+
+            ImGui::Text("STATS");
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Text("Samples: %ld", cam.get_num_samples());
             ImGui::Text("Framerate (app): %.1f FPS", ImGui::GetIO().Framerate);
+
+            ImGui::Separator();
+
+            ImGui::Text("Press 'ESC' to exit");
             ImGui::End();
         }
         

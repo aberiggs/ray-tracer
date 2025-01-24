@@ -84,11 +84,11 @@ void camera::render_data(std::vector<unsigned char>& pixel_data) {
     }
 }
 
-void camera::stop() {
+void camera::stop(bool join) {
     should_render = false;
-    // if (render_thread.joinable()) {
-        // render_thread.join();
-    // }
+    if (join && render_thread.joinable()) {
+        render_thread.join();
+    }
 }
 
 void camera::reset() {
