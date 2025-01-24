@@ -111,8 +111,6 @@ int main(int, char**)
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != nullptr);
 
-    // Our state
-    ImVec4 clear_color = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
 
     // Main loop
 #ifdef __EMSCRIPTEN__
@@ -122,17 +120,18 @@ int main(int, char**)
     EMSCRIPTEN_MAINLOOP_BEGIN
 #else
 
+    // Window background color
+    ImVec4 clear_color = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
 
     // Ray Tracer setup
     camera cam;
     hittable_list world = scene::pastel_box(cam);
     // Optimize with BVH - TODO: Make option 
-    world = hittable_list(std::make_shared<bvh_node>(world));
-    cam.initialize();
+    auto optimized_world = hittable_list(std::make_shared<bvh_node>(world));
 
     // Start rendering asynchronously
     auto world_ptr = std::make_shared<hittable_list>(world);
-    cam.render_async(world_ptr);
+    cam.load_scene(world_ptr);
 
     // Setup for render previewing
     std::vector<unsigned char> image_data {}; // rgb values of each pixel
@@ -171,8 +170,7 @@ int main(int, char**)
 
         // Perform render tasks and display
         {
-            // TODO: Modify update rate?
-            int image_width {cam.get_image_height()};
+            int image_width {cam.get_image_width()};
             int image_height {cam.get_image_height()};
             // Update every 500 ms
             // TODO: Make this a setting
@@ -185,7 +183,7 @@ int main(int, char**)
             if (elapsed > update_rate) {
                 cam.render_data(image_data);
                 glBindTexture(GL_TEXTURE_2D, image_texture);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cam.get_image_width(), cam.get_image_height(), 0, GL_RGB, GL_UNSIGNED_BYTE, image_data.data());
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_width, image_height, 0, GL_RGB, GL_UNSIGNED_BYTE, image_data.data());
                 glBindTexture(GL_TEXTURE_2D, 0);
                 last_update = std::chrono::high_resolution_clock::now();
             }
@@ -210,13 +208,26 @@ int main(int, char**)
             static bool render = true;
             ImGui::Checkbox("Render", &render);
             if (render && !cam.is_rendering()) {
-                cam.render_async(world_ptr);
+                cam.render_async(5);
             } else if (!render && cam.is_rendering()) {
                 cam.stop();
-            } 
+            }
 
-            ImGui::Text("Framerate (app): %.1f FPS", ImGui::GetIO().Framerate);
+            // Reset button
+            if (ImGui::Button("Reset")) {
+                cam.reset();
+            }
+
+            // Save button
+            if (ImGui::Button("Save")) {
+                // Save image to file
+                std::cout << "Saving not implemented yet" << std::endl;
+            }
+
             ImGui::Text("Samples: %ld", cam.get_num_samples());
+ 
+            ImGui::Separator();
+            ImGui::Text("Framerate (app): %.1f FPS", ImGui::GetIO().Framerate);
             ImGui::End();
         }
         
