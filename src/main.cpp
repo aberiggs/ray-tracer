@@ -14,6 +14,12 @@
 #include "envs.h"
 #include "hittable_list.h"
 
+// stb image
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 // [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to maximize ease of testing and compatibility with old VS compilers.
 // To link with VS2010-era libraries, VS2015+ requires linking with legacy_stdio_definitions.lib, which we do using this pragma.
 // Your own project should not be affected, as you are likely to link with a newer binary of GLFW that is adequate for your version of Visual Studio.
@@ -188,12 +194,12 @@ int main(int, char**)
                 last_update = std::chrono::high_resolution_clock::now();
             }
 
-            ImGui::Begin("Renderer Output");
+            // ImGui::Begin("Renderer Output");
             if (!image_data.empty()) {
-                ImGui::Image((ImTextureID)(intptr_t)image_texture, ImVec2(image_width, image_height));
+                ImGui::GetBackgroundDrawList()->AddImage((ImTextureID)(intptr_t)image_texture, ImVec2(0,0), ImVec2(image_width, image_height));
             }
-            ImGui::SetWindowSize(ImVec2(image_width, image_height), ImGuiCond_FirstUseEver);
-            ImGui::End();
+            // ImGui::SetWindowSize(ImVec2(image_width, image_height), ImGuiCond_FirstUseEver);
+            // ImGui::End();
         }
 
         // Info window
@@ -212,8 +218,10 @@ int main(int, char**)
                 num_workers = 1;
             }
 
+            // TODO: Apply button
+
             // Checkbox to control rendering
-            if (cam.is_rendering()) {
+            if (cam.get_should_render()) {
                 if (ImGui::Button("Pause Render"))
                     cam.stop(false);
             } else if (cam.get_num_samples() != 0) {
@@ -229,11 +237,28 @@ int main(int, char**)
                 cam.reset();
             }
 
+            // Save button (if anything has been rendered)
+            if (cam.get_num_samples() != 0) {
+                if (ImGui::Button("Save Image")) {
+                    // Save image to file
+                    // TODO: File location/name picker
+                    std::string filename = "render_output.png";
+                    stbi_write_png(filename.c_str(), cam.get_image_width(), cam.get_image_height(), 3, image_data.data(), cam.get_image_width() * 3);
+                }
+            }
+
             ImGui::Separator();
 
             ImGui::Text("STATS");
             ImGui::Spacing();
             ImGui::Spacing();
+            if (cam.get_is_rendering()) {
+                // Green text if rendering
+                ImGui::TextColored(ImVec4(0.1, 0.8, 0.1, 1), "Rendering...");
+            } else {
+                // Red text if not rendering
+                ImGui::TextColored(ImVec4(0.8, 0.1, 0.1, 1), "Rendering stopped...");
+            }
             ImGui::Text("Samples: %ld", cam.get_num_samples());
             ImGui::Text("Framerate (app): %.1f FPS", ImGui::GetIO().Framerate);
 

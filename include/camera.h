@@ -32,7 +32,9 @@ public:
 
     int get_image_width() const { return image_width; }
     int get_image_height() const { return image_height; }
-    bool is_rendering() const { return should_render; }
+    bool get_should_render() const { return should_render; }
+    bool get_is_rendering() const { return is_rendering; }
+
 
     // Halt rendering by killing the render thread + all workers
     void stop(bool join = true);
@@ -45,7 +47,9 @@ public:
 
 private:
     std::atomic<bool> should_render {false};
-    std::atomic<long> num_samples {0};
+    std::atomic<bool> is_rendering {false};
+    // Note - `num_samples` may not always be accurate for a given pixel due to the way I handle async rendering.
+    std::atomic<long> num_samples {0}; 
     std::vector<std::atomic<color>> pixel_samples {}; // 2D array of pixel samples
     std::thread render_thread {};
     std::mutex scene_mutex {};

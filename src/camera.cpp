@@ -18,12 +18,18 @@ void camera::render_async(int num_workers) {
     should_render = true;
     // Start rendering asynchronously
     render_thread = std::thread([this, num_workers]() {
-        std::vector<std::thread> workers;
+        // Set the rendering flag
+        is_rendering = true;
 
+        std::vector<std::thread> workers;
         if (!scene_ptr) {
             // Nothing to render
             return;
         }
+
+        // TODO: Consider a rewrite where each of the n workers renders its own chunk of the given image
+        // e.g. n=2 -> worker 1 renders the top half of the image, worker 2 renders the bottom half
+        // Also, consider throwing away a sample that is canceled (e.g. if user pauses rendering in the middle of sample 2, throw it away)
 
         for (int w = 0; w < num_workers; ++w) {
             workers.push_back(std::thread([this]() {
@@ -41,6 +47,9 @@ void camera::render_async(int num_workers) {
             if (worker.joinable())
                 worker.join();
         }
+
+        // All workers are done
+        is_rendering = false;
     });
 }
 

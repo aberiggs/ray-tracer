@@ -20,6 +20,9 @@ include_directories(include)
 # Add imgui includes
 include_directories(ext/imgui ext/imgui/backends ext/imgui/misc/cpp)
 
+# Add stb_image includes
+include_directories(ext/stb)
+
 # Add imgui sources
 file(GLOB IMGUI_SOURCES
     ext/imgui/*.cpp
