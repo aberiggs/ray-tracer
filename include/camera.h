@@ -9,7 +9,7 @@
 class camera {
 public:
     double aspect_ratio      {1.0};
-    int    image_width       {100};
+    int    image_width       {100}; // TODO: should be private - can't be updated during a render
     int    max_depth         {10};
     color  background        {0, 0, 0};
 
@@ -34,6 +34,7 @@ public:
     int get_image_height() const { return image_height; }
     bool get_should_render() const { return should_render; }
     bool get_is_rendering() const { return is_rendering; }
+    long get_render_time() const { return render_time; }
 
 
     // Halt rendering by killing the render thread + all workers
@@ -50,6 +51,8 @@ private:
     std::atomic<bool> is_rendering {false};
     // Note - `num_samples` may not always be accurate for a given pixel due to the way I handle async rendering.
     std::atomic<long> num_samples {0}; 
+    // Time spent rendering in milliseconds
+    std::atomic<long> render_time {0};
     std::vector<std::atomic<color>> pixel_samples {}; // 2D array of pixel samples
     std::thread render_thread {};
     std::mutex scene_mutex {};
@@ -66,7 +69,9 @@ private:
 
     // Render a single sample of the scene
     std::vector<color> render_sample();
+    std::vector<color> render_sample_async(int num_workers);
 
+    // i = col, j = row
     ray get_ray(int i, int j) const;
     
     vec3 sample_square() const; 

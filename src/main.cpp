@@ -260,6 +260,8 @@ int main(int, char**)
                 ImGui::TextColored(ImVec4(0.8, 0.1, 0.1, 1), "Rendering stopped...");
             }
             ImGui::Text("Samples: %ld", cam.get_num_samples());
+            ImGui::Text("Render time: %.2f seconds", static_cast<double>(cam.get_render_time())/1000);
+            ImGui::Text("Samples/second: %.2f", static_cast<double>(cam.get_num_samples()) / (static_cast<double>(cam.get_render_time())/1000));
             ImGui::Text("Framerate (app): %.1f FPS", ImGui::GetIO().Framerate);
 
             ImGui::Separator();

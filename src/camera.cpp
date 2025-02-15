@@ -21,31 +21,23 @@ void camera::render_async(int num_workers) {
         // Set the rendering flag
         is_rendering = true;
 
-        std::vector<std::thread> workers;
         if (!scene_ptr) {
             // Nothing to render
+            // TODO: Handle this case better (e.g. needs to set is_rendering to false)
             return;
         }
 
-        // TODO: Consider a rewrite where each of the n workers renders its own chunk of the given image
-        // e.g. n=2 -> worker 1 renders the top half of the image, worker 2 renders the bottom half
-        // Also, consider throwing away a sample that is canceled (e.g. if user pauses rendering in the middle of sample 2, throw it away)
-
-        for (int w = 0; w < num_workers; ++w) {
-            workers.push_back(std::thread([this]() {
-                while (should_render) {
-                    auto sample = render_sample();
-                    for (int i = 0; i < image_width * image_height; ++i) {
-                        pixel_samples[i] = pixel_samples[i] + sample[i];
-                    }
-                    ++num_samples;
-                }
-            }));
-        }
-
-        for (auto& worker : workers) {
-            if (worker.joinable())
-                worker.join();
+        while (should_render) {
+            std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+            auto sample = render_sample_async(num_workers);
+            // TODO: Lock here
+            for (int i = 0; i < image_width * image_height; ++i) {
+                pixel_samples[i] = pixel_samples[i] + sample[i];
+            }
+            ++num_samples;
+            std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+            render_time += std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+            // TODO: Unlock here
         }
 
         // All workers are done
@@ -62,6 +54,37 @@ std::vector<color> camera::render_sample() {
                 ray r = get_ray(j, i);
                 pixel_color = ray_color(r, max_depth);
             sample[i * image_width + j] = pixel_color;
+        }
+    }
+
+    return sample;
+}
+
+std::vector<color> camera::render_sample_async(int num_workers) {
+    std::vector<color> sample(image_width * image_height);
+    std::vector<std::thread> workers;
+
+    for (int w = 0; w < num_workers; w++) {
+        auto rows_per_worker = image_height / num_workers;
+        // If there's a remainder, overestimate the number of rows per worker
+        if (image_height % num_workers != 0) {
+            rows_per_worker += 1;
+        }
+        workers.push_back(std::thread([this, &sample, w, rows_per_worker]() {
+            for (int row = w * rows_per_worker; row < std::min((w + 1) * rows_per_worker, image_height); ++row) {
+                for (int col = 0; col < image_width; ++col) {
+                    color pixel_color(0, 0, 0);
+                    ray r = get_ray(col, row);
+                    pixel_color = ray_color(r, max_depth);
+                    sample[row * image_width + col] = pixel_color;
+                }
+            }
+        }));
+    }
+
+    for (auto& worker : workers) {
+        if (worker.joinable()) {
+            worker.join();
         }
     }
 
@@ -106,6 +129,7 @@ void camera::reset() {
 
     pixel_samples = std::vector<std::atomic<color>>(image_width * image_height);
     num_samples = 0;
+    render_time = 0;
     for (int i = 0; i < image_width * image_height; ++i) {
         pixel_samples[i] = color(0, 0, 0);
     }
