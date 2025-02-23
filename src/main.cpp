@@ -237,15 +237,28 @@ int main(int, char**)
                 cam.reset();
             }
 
+            ImGui::Separator();
+
+            ImGui::Text("OUTPUT");
+            ImGui::Spacing();
+            ImGui::Spacing(); 
+
+            // File output name
+            static char filename[128] = "render_output.png";
+            ImGui::InputText("Output File", filename, IM_ARRAYSIZE(filename)); 
+
             // Save button (if anything has been rendered)
-            if (cam.get_num_samples() != 0) {
-                if (ImGui::Button("Save Image")) {
-                    // Save image to file
-                    // TODO: File location/name picker
-                    std::string filename = "render_output.png";
-                    stbi_write_png(filename.c_str(), cam.get_image_width(), cam.get_image_height(), 3, image_data.data(), cam.get_image_width() * 3);
-                }
+            if (cam.get_num_samples() == 0) 
+                ImGui::BeginDisabled(true);
+            
+            if (ImGui::Button("Save Image")) {
+                // Save image to file
+                // TODO: GUI file dialog 
+                stbi_write_png(filename, cam.get_image_width(), cam.get_image_height(), 3, image_data.data(), cam.get_image_width() * 3);
             }
+
+            if (cam.get_num_samples() == 0) 
+                ImGui::EndDisabled();
 
             ImGui::Separator();
 
