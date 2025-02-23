@@ -6,55 +6,144 @@
 #include <future>
 #include <vector>
 
-std::vector<color> camera::render(const hittable& world) {
-    initialize();
+void camera::render_async(int num_workers) {
+    // TODO: Lock
 
-    // Create output buffer
-    std::vector<color> output_buffer(image_width * image_height);
+    should_render = false;
+    // Join the previous thread if it's still running
+    if (render_thread.joinable()) {
+        render_thread.join();
+    }
 
-    std::clog << "Starting render:\n";
-    std::clog << "Image size: " << image_width << "x" << image_height << "\n";
-    std::clog << "Samples per pixel: " << samples_per_pixel << "\n";
-    std::clog << "Max depth: " << max_depth << "\n\n";
+    should_render = true;
+    // Start rendering asynchronously
+    render_thread = std::thread([this, num_workers]() {
+        // Set the rendering flag
+        is_rendering = true;
 
-    int completed_rows {0};
-    std::mutex completed_rows_mutex;
-
-    std::vector<std::future<void>> futures;
-    for (int j = 0; j < image_height; ++j) {
-        if (j % 10 == 0) { // Prevent too many threads from being created at a time
-            for (auto& future : futures) {
-                future.wait();
-            }
+        if (!scene_ptr) {
+            // Nothing to render
+            // TODO: Handle this case better (e.g. needs to set is_rendering to false)
+            return;
         }
-        futures.push_back(std::async(std::launch::async, [this, &world, &output_buffer, &completed_rows, &completed_rows_mutex, j]() {
-            for (int i = 0; i < image_width; ++i) {
-                color pixel_color(0, 0, 0);
-                for (int s = 0; s < samples_per_pixel; ++s) {
-                    ray r = get_ray(i, j);
-                    pixel_color += ray_color(r, world, max_depth);
-                }
-                output_buffer[j * image_width + i] = pixel_color * pixel_samples_scale;
+
+        while (should_render) {
+            std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+            auto sample = render_sample_async(num_workers);
+            // TODO: Lock here
+            for (int i = 0; i < image_width * image_height; ++i) {
+                pixel_samples[i] = pixel_samples[i] + sample[i];
             }
-            std::lock_guard<std::mutex> lock(completed_rows_mutex);
-            ++completed_rows;
-            std::clog << "\rProgress: " << completed_rows << "/" << image_height << std::flush;
+            ++num_samples;
+            std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+            render_time += std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+            // TODO: Unlock here
+        }
+
+        // All workers are done
+        is_rendering = false;
+    });
+}
+
+std::vector<color> camera::render_sample() {
+    std::vector<color> sample(image_width * image_height);
+
+    for (int i = 0; i < image_height; ++i) {
+        for (int j = 0; j < image_width; ++j) {
+            color pixel_color(0, 0, 0);
+                ray r = get_ray(j, i);
+                pixel_color = ray_color(r, max_depth);
+            sample[i * image_width + j] = pixel_color;
+        }
+    }
+
+    return sample;
+}
+
+std::vector<color> camera::render_sample_async(int num_workers) {
+    std::vector<color> sample(image_width * image_height);
+    std::vector<std::thread> workers;
+
+    for (int w = 0; w < num_workers; w++) {
+        auto rows_per_worker = image_height / num_workers;
+        // If there's a remainder, overestimate the number of rows per worker
+        if (image_height % num_workers != 0) {
+            rows_per_worker += 1;
+        }
+        workers.push_back(std::thread([this, &sample, w, rows_per_worker]() {
+            for (int row = w * rows_per_worker; row < std::min((w + 1) * rows_per_worker, image_height); ++row) {
+                for (int col = 0; col < image_width; ++col) {
+                    color pixel_color(0, 0, 0);
+                    ray r = get_ray(col, row);
+                    pixel_color = ray_color(r, max_depth);
+                    sample[row * image_width + col] = pixel_color;
+                }
+            }
         }));
     }
 
-    for (auto& future : futures) {
-        future.wait();
+    for (auto& worker : workers) {
+        if (worker.joinable()) {
+            worker.join();
+        }
     }
 
-    std::clog << "\n\nDone.\n";
-    return output_buffer;
+    return sample;
 }
 
-void camera::initialize() {
+void camera::render_data(std::vector<unsigned char>& pixel_data) {
+    // Lock the scene mutex - we're going to be reading from the scene
+    std::lock_guard<std::mutex> guard(scene_mutex);
+
+    pixel_data = std::vector<unsigned char>(image_width * image_height * 3);
+
+    if (num_samples == 0) {
+        for (int i = 0; i < image_width * image_height; ++i) {
+            pixel_data.push_back(0);
+            pixel_data.push_back(0);
+            pixel_data.push_back(0);
+        }
+    } else {
+        // Iterate through pixel samples and average them
+        for (int i = 0; i < image_height; ++i) {
+            for (int j = 0; j < image_width; ++j) {
+                auto pixel = pixel_samples[i * image_width + j].load() / num_samples;
+                pixel_data[(i * image_width + j) * 3] = get_color_component(pixel, 0);
+                pixel_data[(i * image_width + j) * 3 + 1] = get_color_component(pixel, 1);
+                pixel_data[(i * image_width + j) * 3 + 2] = get_color_component(pixel, 2);
+            }
+        }
+    }
+}
+
+void camera::stop(bool join) {
+    should_render = false;
+    if (join && render_thread.joinable()) {
+        render_thread.join();
+    }
+}
+
+void camera::reset() {
+    // Kill the render thread if it's still running
+    stop();
+
+    pixel_samples = std::vector<std::atomic<color>>(image_width * image_height);
+    num_samples = 0;
+    render_time = 0;
+    for (int i = 0; i < image_width * image_height; ++i) {
+        pixel_samples[i] = color(0, 0, 0);
+    }
+}
+
+void camera::load_scene(std::shared_ptr<hittable> scene_ptr) {
+
+    // We're going to be changing the scene, so lock the mutex
+    std::lock_guard<std::mutex> guard(scene_mutex);
+
+    this->scene_ptr = scene_ptr;
+
     image_height = static_cast<int>(image_width / aspect_ratio);
     image_height = (image_height < 1) ? 1 : image_height; // Ensure height is at least 1
-
-    pixel_samples_scale = 1.0 / samples_per_pixel;
 
     center = lookfrom; 
 
@@ -85,6 +174,11 @@ void camera::initialize() {
     auto defocus_radius = focus_dist * std::tan(degrees_to_radians(defocus_angle) / 2);
     defocus_disk_u = u * defocus_radius;
     defocus_disk_v = v * defocus_radius;
+
+    // Reset the camera with the new scene
+    reset();
+
+    std::cout << "Finished loading scene" << std::endl;
 }
 
 ray camera::get_ray(int i, int j) const {
@@ -108,13 +202,13 @@ vec3 camera::defocus_disk_sample() const {
     return center + p.x() * defocus_disk_u + p.y() * defocus_disk_v;
 }
 
-color camera::ray_color(const ray& r, const hittable& world, int depth) const {
+color camera::ray_color(const ray& r, int depth) const {
     if (depth <= 0) {
         return color(0, 0, 0);
     }
 
     hit_record rec;
-    if (!world.hit(r, {0.001, inf}, rec))
+    if (!scene_ptr->hit(r, {0.001, inf}, rec))
         return background;
     
     ray scattered;
@@ -123,6 +217,7 @@ color camera::ray_color(const ray& r, const hittable& world, int depth) const {
     if (!rec.mat_ptr->scatter(r, rec, attenuation, scattered)) 
         return color_from_emission;
     
-    color color_from_scatter = attenuation * ray_color(scattered, world, depth - 1);
+    color color_from_scatter = attenuation * ray_color(scattered, depth - 1);
+
     return color_from_emission + color_from_scatter;
 }

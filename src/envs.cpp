@@ -54,7 +54,6 @@ hittable_list scene::spheres(camera& cam) {
 
     cam.aspect_ratio      = 16.0 / 9.0;
     cam.image_width       = 1200;
-    cam.samples_per_pixel = 500;
     cam.max_depth         = 50;
     cam.background        = color(0.70, 0.80, 1.00);
 
@@ -114,7 +113,6 @@ hittable_list scene::moving_spheres(camera& cam) {
 
     cam.aspect_ratio      = 16.0 / 9.0;
     cam.image_width       = 400;
-    cam.samples_per_pixel = 100;
     cam.max_depth         = 50;
     cam.background        = color(0.70, 0.80, 1.00);
 
@@ -148,7 +146,6 @@ hittable_list scene::quads(camera& cam) {
 
     cam.aspect_ratio      = 1.0;
     cam.image_width       = 400;
-    cam.samples_per_pixel = 100;
     cam.max_depth         = 50;
     cam.background        = color(0.70, 0.80, 1.00);
 
@@ -174,7 +171,6 @@ hittable_list scene::simple_light(camera& cam) {
 
     cam.aspect_ratio      = 1.0;
     cam.image_width       = 400;
-    cam.samples_per_pixel = 100;
     cam.max_depth         = 50;
     cam.background        = color(0.05, 0.05, 0.05);
 
@@ -204,7 +200,6 @@ hittable_list scene::sphere_emit(camera& cam) {
 
     cam.aspect_ratio      = 1.0;
     cam.image_width       = 400;
-    cam.samples_per_pixel = 100;
     cam.max_depth         = 100;
     cam.background        = color(0.05, 0.05, 0.05);
 
@@ -245,7 +240,6 @@ hittable_list scene::cornell_box(camera& cam) {
 
     cam.aspect_ratio      = 1.0;
     cam.image_width       = 600;
-    cam.samples_per_pixel = 200;
     cam.max_depth         = 50;
     cam.background        = color(0,0,0);
 
@@ -286,7 +280,6 @@ hittable_list scene::cornell_box_alt1(camera& cam) {
 
     cam.aspect_ratio      = 1.0;
     cam.image_width       = 600;
-    cam.samples_per_pixel = 200;
     cam.max_depth         = 50;
     cam.background        = color(0,0,0);
 
@@ -310,7 +303,6 @@ hittable_list scene::checkered_spheres(camera& cam) {
 
     cam.aspect_ratio      = 16.0 / 9.0;
     cam.image_width       = 400;
-    cam.samples_per_pixel = 100;
     cam.max_depth         = 50;
     cam.background        = color(0.70, 0.80, 1.00);
 
@@ -364,7 +356,6 @@ hittable_list scene::pastel_box(camera& cam) {
 
     cam.aspect_ratio      = 1.0;
     cam.image_width       = 800;
-    cam.samples_per_pixel = 500;
     cam.max_depth         = 50;
     cam.background        = color(0,0,0);
 
@@ -381,7 +372,7 @@ hittable_list scene::pastel_box(camera& cam) {
 hittable_list scene::cornell_box_smoke(camera& cam) {
     hittable_list world;
 
-   auto red   = make_shared<lambertian>(color(.65, .05, .05));
+    auto red   = make_shared<lambertian>(color(.65, .05, .05));
     auto white = make_shared<lambertian>(color(.73, .73, .73));
     auto green = make_shared<lambertian>(color(.12, .45, .15));
     auto light = make_shared<diffuse_light>(color(7, 7, 7));
@@ -406,7 +397,6 @@ hittable_list scene::cornell_box_smoke(camera& cam) {
 
     cam.aspect_ratio      = 1.0;
     cam.image_width       = 600;
-    cam.samples_per_pixel = 200;
     cam.max_depth         = 50;
     cam.background        = color(0,0,0);
 
