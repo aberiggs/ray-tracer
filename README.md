@@ -1,5 +1,5 @@
 # ray-tracer
-A simple CPU based brute force path tracer written in **C++**. 
+A simple brute force software raytracer written in **C++**. 
 
 <details>
 <Summary><h2>Building</h2></Summary>
